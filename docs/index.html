@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Index des documents</title>
+  <style>
+    body{font-family:system-ui,Arial,sans-serif;margin:2rem;background:#0b1120;color:#e5e7eb}
+    a{color:#60a5fa;text-decoration:none}a:hover{text-decoration:underline}
+    table{border-collapse:collapse;width:100%;margin-top:1rem}
+    th,td{border:1px solid #1f2937;padding:8px}th{background:#111827}
+    .muted{color:#9ca3af}
+  </style>
+</head>
+<body>
+<h1>Index automatique des documents</h1>
+<p class="muted">Cette page liste automatiquement les fichiers du dépôt public.</p>
+<table><thead><tr><th>Nom</th><th>Extension</th><th>Taille</th><th>Chemin</th></tr></thead>
+<tbody id="tbody"><tr><td colspan="4">Chargement…</td></tr></tbody></table>
+<script>
+function detect(){const h=location.hostname,p=location.pathname.split('/').filter(Boolean);
+ if(h.endsWith('.github.io')&&p.length>0)return{owner:h.replace('.github.io',''),repo:p[0]}; return null;}
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));}
+async function init(){const det=detect();if(!det){tbody.innerHTML='<tr><td colspan=4>Dépôt non détecté</td></tr>';return;}
+const owner=det.owner,repo=det.repo;
+const meta=await fetch(`https://api.github.com/repos/${owner}/${repo}`).then(r=>r.json());
+const branch=meta.default_branch||'main';
+const tree=await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`).then(r=>r.json());
+const files=(tree.tree||[]).filter(n=>n.type==='blob');
+const tbody=document.getElementById('tbody');tbody.innerHTML='';
+files.filter(f=>!f.path.startsWith('docs/')).forEach(f=>{
+  const name=f.path.split('/').pop();const ext=name.includes('.')?name.split('.').pop():'';
+  tbody.insertAdjacentHTML('beforeend',`<tr><td><a target=_blank href=https://${owner}.github.io/${repo}/${encodeURIComponent(f.path)}>${escapeHtml(name)}</a></td><td>${ext}</td><td>${f.size||''}</td><td>${escapeHtml(f.path)}</td></tr>`);
+});}
+init();
+</script>
+</body>
+</html>
