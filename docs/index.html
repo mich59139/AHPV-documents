@@ -22,7 +22,7 @@
     .list th{color:#9ca3af;background:#0f172a;text-align:left;position:sticky;top:64px}
     .path{color:#9ca3af;font-size:13px}
     a{color:var(--accent);text-decoration:none}
-    a:hover{text-decoration:underline}
+    a:hover{ text-decoration: underline }
     .pill{font-size:12px;padding:6px 10px;border-radius:999px;background:#0f172a;border:1px solid #1f2937;color:#9ca3af}
   </style>
 </head>
@@ -30,7 +30,7 @@
   <header>
     <div class="wrap">
       <h1>Index automatique des documents</h1>
-      <div class="muted" id="repoInfo">Dépôt : mich59139/AHPV-documents</div>
+      <div class="muted">Dépôt : mich59139/AHPV-documents</div>
     </div>
   </header>
 
@@ -53,7 +53,7 @@
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <span id="status" class="pill">Prêt</span>
-          <a id="repoLink" class="badge" href="https://github.com/mich59139/AHPV-documents" target="_blank">Voir sur GitHub ↗</a>
+          <a class="badge" target="_blank" href="https://github.com/mich59139/AHPV-documents">Voir sur GitHub ↗</a>
         </div>
       </div>
 
@@ -70,62 +70,65 @@ const REPO  = "AHPV-documents";
 let   BRANCH = "main";
 
 const el=(id)=>document.getElementById(id);
-const prettySize=(b)=>{ if(!b) return ''; const u=['B','KB','MB','GB']; let i=0,v=b; while(v>=1024&&i<u.length-1){v/=1024;i++;} return (v<10&&i>0?v.toFixed(1):Math.round(v))+' '+u[i]; };
-const encodeP=(p)=>p.split('/').map(encodeURIComponent).join('/');
-const escapeHtml=(s)=>s.replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;','\\'':'&#39;'}[c]));
+const prettySize=(b)=>{ if(!b) return ""; const u=["B","KB","MB","GB"]; let i=0,v=b; while(v>=1024&&i<u.length-1){v/=1024;i++;} return (v<10&&i>0?v.toFixed(1):Math.round(v))+" "+u[i]; };
+const encodeP=(p)=>p.split("/").map(encodeURIComponent).join("/");
+const escapeHtml=(s)=>s.replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 
 async function init(){
   try{
-    setStatus('Chargement…');
+    setStatus("Chargement…");
     const meta = await fetchJSON(`https://api.github.com/repos/${OWNER}/${REPO}`);
-    BRANCH = meta.default_branch || 'main';
-    const tree = await fetchJSON(`https://api.github.com/repos/${OWNER}/${REPO}/git/trees/${BRANCH}?recursive=1`);
-    const blobs = (tree.tree||[]).filter(n=>n.type==='blob');
+    BRANCH = meta.default_branch || "main";
+    const tree  = await fetchJSON(`https://api.github.com/repos/${OWNER}/${REPO}/git/trees/${BRANCH}?recursive=1`);
+    const blobs = (tree.tree||[]).filter(n=>n.type==="blob");
     const files = blobs.map(n=>{
       const path=n.path;
-      const name=path.split('/').pop();
-      const ext=name.includes('.')?name.split('.').pop().toLowerCase():'';
+      const name=path.split("/").pop();
+      const ext =name.includes(".")?name.split(".").pop().toLowerCase():"";
       return {path,name,ext,size:n.size||0};
     });
 
-    el('search').addEventListener('input', ()=>render(files));
-    el('ext').addEventListener('change',  ()=>render(files));
-    el('sort').addEventListener('change', ()=>render(files));
+    el("search").addEventListener("input", ()=>render(files));
+    el("ext").addEventListener("change",   ()=>render(files));
+    el("sort").addEventListener("change",  ()=>render(files));
 
     render(files);
     setStatus(`OK – ${files.length} fichiers`);
   }catch(e){
     console.error(e);
-    setStatus('Erreur : dépôt privé ? (doit être public)');
+    setStatus("Erreur : dépôt privé ? (doit être public)");
   }
 }
 
 function render(files){
-  const q=el('search').value.trim().toLowerCase();
-  const ext=el('ext').value;
-  const sort=el('sort').value;
+  const q   = el("search").value.trim().toLowerCase();
+  const ext = el("ext").value;
+  const sort= el("sort").value;
+
   let rows = files.filter(f=>{
-    const inQ=!q||f.name.toLowerCase().includes(q)||f.path.toLowerCase().includes(q);
-    const inE=!ext||f.ext===ext;
-    const isDocs=f.path.startsWith('docs/');
-    return inQ&&inE&&!isDocs;
+    const inQ = !q || f.name.toLowerCase().includes(q) || f.path.toLowerCase().includes(q);
+    const inE = !ext || f.ext===ext;
+    const isDocs = f.path.startsWith("docs/"); // ne pas lister les fichiers du site
+    return inQ && inE && !isDocs;
   });
+
   rows.sort((a,b)=>{
-    if(sort==='name') return a.name.localeCompare(b.name);
-    if(sort==='name_desc') return b.name.localeCompare(a.name);
-    if(sort==='size') return (a.size||0)-(b.size||0);
-    if(sort==='size_desc') return (b.size||0)-(a.size||0);
+    if(sort==="name") return a.name.localeCompare(b.name);
+    if(sort==="name_desc") return b.name.localeCompare(a.name);
+    if(sort==="size") return (a.size||0)-(b.size||0);
+    if(sort==="size_desc") return (b.size||0)-(a.size||0);
     return 0;
   });
-  const tbody=el('tbody'); tbody.innerHTML='';
-  const base=`https://mich59139.github.io/AHPV-documents`; // site projet
+
+  const tbody=el("tbody"); tbody.innerHTML="";
+  const base=`https://mich59139.github.io/AHPV-documents`;
   for(const f of rows){
     const site=`${base}/${encodeP(f.path)}`;
     const gh  =`https://github.com/${OWNER}/${REPO}/blob/${BRANCH}/${encodeP(f.path)}`;
     const raw =`https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/${encodeP(f.path)}`;
-    const tr=document.createElement('tr');
+    const tr=document.createElement("tr");
     tr.innerHTML=`<td><a href="${site}" target="_blank">${escapeHtml(f.name)}</a></td>
-                  <td>${escapeHtml(f.ext||'—')}</td>
+                  <td>${escapeHtml(f.ext||"—")}</td>
                   <td>${prettySize(f.size)}</td>
                   <td class="path">${escapeHtml(f.path)}</td>
                   <td><a class="badge" href="${site}" target="_blank">Ouvrir</a>
@@ -139,11 +142,11 @@ function render(files){
 }
 
 async function fetchJSON(url){
-  const res=await fetch(url,{headers:{'Accept':'application/vnd.github+json'}});
-  if(!res.ok) throw new Error('HTTP '+res.status);
+  const res=await fetch(url,{headers:{"Accept":"application/vnd.github+json"}});
+  if(!res.ok) throw new Error("HTTP "+res.status);
   return res.json();
 }
-function setStatus(t){ el('status').textContent=t; }
+function setStatus(t){ el("status").textContent=t; }
 init();
 </script>
 </body>
