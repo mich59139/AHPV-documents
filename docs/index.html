@@ -22,7 +22,7 @@
     .list th{color:#9ca3af;background:#0f172a;text-align:left;position:sticky;top:64px}
     .path{color:#9ca3af;font-size:13px}
     a{color:var(--accent);text-decoration:none}
-    a:hover{ text-decoration: underline }
+    a:hover{text-decoration:underline}
     .pill{font-size:12px;padding:6px 10px;border-radius:999px;background:#0f172a;border:1px solid #1f2937;color:#9ca3af}
   </style>
 </head>
@@ -81,12 +81,16 @@ async function init(){
     BRANCH = meta.default_branch || "main";
     const tree  = await fetchJSON(`https://api.github.com/repos/${OWNER}/${REPO}/git/trees/${BRANCH}?recursive=1`);
     const blobs = (tree.tree||[]).filter(n=>n.type==="blob");
-    const files = blobs.map(n=>{
-      const path=n.path;
-      const name=path.split("/").pop();
-      const ext =name.includes(".")?name.split(".").pop().toLowerCase():"";
-      return {path,name,ext,size:n.size||0};
-    });
+
+    // Inclure tout, y compris ce qui est sous docs/, sauf les fichiers du site lui-même
+    const files = blobs
+      .filter(n => !(n.path === "docs/index.html" || n.path === "docs/.nojekyll"))
+      .map(n=>{
+        const path=n.path;
+        const name=path.split("/").pop();
+        const ext =name.includes(".")?name.split(".").pop().toLowerCase():"";
+        return {path,name,ext,size:n.size||0};
+      });
 
     el("search").addEventListener("input", ()=>render(files));
     el("ext").addEventListener("change",   ()=>render(files));
@@ -108,8 +112,7 @@ function render(files){
   let rows = files.filter(f=>{
     const inQ = !q || f.name.toLowerCase().includes(q) || f.path.toLowerCase().includes(q);
     const inE = !ext || f.ext===ext;
-    const isDocs = f.path.startsWith("docs/"); // ne pas lister les fichiers du site
-    return inQ && inE && !isDocs;
+    return inQ && inE;
   });
 
   rows.sort((a,b)=>{
@@ -121,21 +124,30 @@ function render(files){
   });
 
   const tbody=el("tbody"); tbody.innerHTML="";
-  const base=`https://mich59139.github.io/AHPV-documents`;
+  const siteBase=`https://mich59139.github.io/AHPV-documents`;
+
   for(const f of rows){
-    const site=`${base}/${encodeP(f.path)}`;
+    // Lien “Site” uniquement si le fichier est publié sous /docs/
+    const isServed = f.path.startsWith("docs/");
+    const siteUrl  = isServed ? `${siteBase}/${encodeP(f.path.replace(/^docs\\//,''))}` : null;
+
     const gh  =`https://github.com/${OWNER}/${REPO}/blob/${BRANCH}/${encodeP(f.path)}`;
     const raw =`https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/${encodeP(f.path)}`;
+
+    const openLinks = isServed
+      ? `<a class="badge" href="${siteUrl}" target="_blank">Ouvrir</a> `
+      : ``;
+
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td><a href="${site}" target="_blank">${escapeHtml(f.name)}</a></td>
+    tr.innerHTML=`<td>${siteUrl ? `<a href="${siteUrl}" target="_blank">${escapeHtml(f.name)}</a>` : escapeHtml(f.name)}</td>
                   <td>${escapeHtml(f.ext||"—")}</td>
                   <td>${prettySize(f.size)}</td>
                   <td class="path">${escapeHtml(f.path)}</td>
-                  <td><a class="badge" href="${site}" target="_blank">Ouvrir</a>
-                      <a class="badge" href="${gh}"  target="_blank">GitHub</a>
-                      <a class="badge" href="${raw}" target="_blank">Raw</a></td>`;
+                  <td>${openLinks}<a class="badge" href="${gh}"  target="_blank">GitHub</a>
+                                  <a class="badge" href="${raw}" target="_blank">Raw</a></td>`;
     tbody.appendChild(tr);
   }
+
   if(rows.length===0){
     tbody.innerHTML='<tr><td colspan="5" class="path">Aucun fichier trouvé.</td></tr>';
   }
